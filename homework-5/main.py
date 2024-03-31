@@ -1,7 +1,5 @@
 import json
-
 import psycopg2
-
 from config import config
 
 
@@ -42,31 +40,79 @@ def main():
 
 def create_database(params, db_name) -> None:
     """Создает новую базу данных."""
-    pass
+    try:
+        conn = psycopg2.connect(**params)
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute(f"CREATE DATABASE {db_name}")
+        cur.close()
+        conn.close()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
+
 
 def execute_sql_script(cur, script_file) -> None:
     """Выполняет скрипт из файла для заполнения БД данными."""
-
+    try:
+        with open(script_file, 'r') as f:
+            script = f.read()
+            cur.execute(script)
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
 
 
 def create_suppliers_table(cur) -> None:
     """Создает таблицу suppliers."""
-    pass
+    try:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS suppliers (
+                supplier_id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                contact_name VARCHAR(255),
+                city VARCHAR(255),
+                country VARCHAR(255)
+            )
+        """)
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
 
 
 def get_suppliers_data(json_file: str) -> list[dict]:
     """Извлекает данные о поставщиках из JSON-файла и возвращает список словарей с соответствующей информацией."""
-    pass
+    try:
+        with open(json_file, 'r') as f:
+            suppliers_data = json.load(f)
+        return suppliers_data
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
 
 
 def insert_suppliers_data(cur, suppliers: list[dict]) -> None:
     """Добавляет данные из suppliers в таблицу suppliers."""
-    pass
+    try:
+        for supplier in suppliers:
+            cur.execute("""
+                INSERT INTO suppliers (name, contact_name, city, country)
+                VALUES (%s, %s, %s, %s)
+            """, (supplier['name'], supplier['contact_name'], supplier['city'], supplier['country']))
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
 
 
 def add_foreign_keys(cur, json_file) -> None:
     """Добавляет foreign key со ссылкой на supplier_id в таблицу products."""
-    pass
+    try:
+        cur.execute("""
+            ALTER TABLE products
+            ADD COLUMN IF NOT EXISTS supplier_id INT
+        """)
+        cur.execute("""
+            ALTER TABLE products
+            ADD CONSTRAINT fk_supplier_id
+            FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id)
+        """)
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
 
 
 if __name__ == '__main__':
